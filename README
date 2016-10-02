@@ -1,0 +1,55 @@
+1.- Paste these files in their respectives folders
+
+####################
+## HTML templates ##
+####################
+
+$RSAT/public_html/templates_html/display_d3_tree.html
+$RSAT/public_html/templates_html/display_small_d3_tree.html
+$RSAT/public_html/templates_html/dynamic_heatmap_d3.html
+$RSAT/public_html/templates_html/dynamic_heatmap_d3_and_tables_motif_collection_coverage.html
+$RSAT/public_html/templates_html/Barplot_motif_richness.html
+
+########################################
+## matrix-clustering perl main script ##
+########################################
+
+$RSAT/perl-scripts/matrix-clustering
+
+#################################
+## matrix-clustering R scripts ##
+#################################
+
+$RSAT/R-scripts/heatmap_clusters_by_collection.r
+$RSAT/R-scripts/matrix-clustering.R
+
+
+#######################################################
+## R package to cluster the motifs                   ##
+## I suggest to delete and paste the complete folder ##
+#######################################################
+
+$RSAT/R-scripts/TFBMclust
+
+2.- Once you have substituted these files and the folder run the next command. This will compile the R packages and install the R modules required.
+
+make -f $RSAT/makefiles/install_rsat.mk install_r_packages
+
+##############
+## Examples ##
+##############
+
+## Clustering a single collection of motifs:
+## NOTE: all the resulting files will be produced in the path: a_prefix/for   (dirname)
+                                                             : all_your_files (basename)
+
+matrix-clustering  -v 2 -matrix_format transfac -matrix matrix_collection_alias your_matrix_file -hclust_method average -calc sum -title 'Cluster_1_collection' -metric_build_tree 'Ncor' -lth w 5 -lth cor 0.6 -lth Ncor 0.4 -label_in_tree name -return json,heatmap  -o a_prefix/for/all_your_files
+
+
+## Clustering a two (or more) collection of motifs:
+## You can add as many collections as you want
+## NOTE: when the analyse encompass two or more motif collection, the program computes more analyses (mututal coverage between the motif collections or the number of motifs per collection at each cluster). Check the website demo (two collections)
+
+matrix-clustering  -v 2 -matrix_format transfac -matrix matrix_collection_one_alias your_matrix_file_one -matrix matrix_collection_two_alias your_matrix_file_two -hclust_method average -calc sum -title 'Cluster_1_collection' -metric_build_tree 'Ncor' -lth w 5 -lth cor 0.6 -lth Ncor 0.4 -label_in_tree name -return json,heatmap  -o a_prefix/for/all_your_files
+
+
