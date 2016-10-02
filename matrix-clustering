@@ -1416,6 +1416,10 @@ sub set_output_file_names {
   $main::outfile{heatmap_collections_d3} = $main::outfile{prefix}."_tables/collection_heatmap_tab.tsv";
   $main::outfile{heatmap_collections_attributes} = $main::outfile{prefix}."_tables/collection_heatmap_order.tab";
 
+
+  $main::outfile{motif_richness_barplot_html} = $main::outfile{prefix}."_motif_richness_barplot.html";
+  $main::outfile{motif_richness_tsv} = $main::outfile{prefix}."_motif_richness.tsv";
+
   ## Table with the Clusters ID + Logo path of root motifs
   $main::outfile{root_motifs_table} = $main::outfile{prefix}."_root_motifs_table.tab";
 
@@ -1484,6 +1488,7 @@ sub set_output_file_names {
   ## Some temporary files
   $main::outfile{temp_html} = $main::outfile{prefix}."_temporary.html";
   $main::outfile{temp_html_2} = $main::outfile{prefix}."_temporary_2.html";
+  $main::outfile{temp_html_3} = $main::outfile{prefix}."_temporary_3.html";
   $main::outfile{int_align} = $main::outfile{prefix}."_tables/intermediate_alignments.tab";
 
   ## Archive to facilitate transfer of all the results in a zip file
@@ -1650,7 +1655,10 @@ sub pre_process_motif_files{
       $convert_matrix_cmd .= " -prefix_id ".$collection_name;
       $convert_matrix_cmd .= " -o ".$motif_set_attributes{$collection_name}{matrix_file_processed};
       &doit($convert_matrix_cmd, 0, 1, $verbose, 0, "", $main::out, $main::err);
-      unlink($motif_set_attributes{$collection_name}{matrix_file_processed_1});
+
+     #$mat_file_trimmed = &trim_matrix_low_IC_columns_preprocess($motif_set_attributes{$collection_name}{matrix_file_processed}, $motif_set_attributes{$collection_name}{matrix_file_processed_1}, 1);
+
+      #unlink($motif_set_attributes{$collection_name}{matrix_file_processed_1});
 
       ########################################
       ## Save the unique ID in a hash table
@@ -3200,7 +3208,7 @@ sub Text_end_report {
 	    <li>
 	      <strong>References</strong>
               <ol>
-                 <li> Castro-Mondragon JA et al (in preparation).</li>
+                 <li> Castro-Mondragon JA et al (in preparation) <a target="_blank" href="http://biorxiv.org/content/early/2016/07/27/065565">bioRxiv 065565; doi: http://dx.doi.org/10.1101/065565</a></li>
                  <li><strong>Last RSAT release: </strong><a href="http://nar.oxfordjournals.org/content/early/2015/04/21/nar.gkv362.full" target=\'_blank\'>Medina-Rivera, A. et al. RSAT 2015: Regulatory Sequence Analysis Tools. Nucleic Acids Research (2015).</a></li>
               </ol>
 	    </li>
@@ -4725,7 +4733,9 @@ $clust_table .= "\n".'
   foreach my $c (1 .. scalar keys %root_motifs_features){
       $cluster = $cluster_id_hash{$c};
 
-      my $count = $root_motifs_features{$cluster}{collection_count};      
+      my $count = $root_motifs_features{$cluster}{collection_count};
+
+      print $count."\t".$cluster."\n";
 
       $row_cluster_tab .= "
          <tr>
@@ -4752,6 +4762,37 @@ $clust_table .= "\n".'
     $clust_table =~ s/--clus_tab--/$row_cluster_tab/g;
     print $syn $clust_table;
     close $clust_table;
+}
+
+
+################################################################
+## Create the motif richness barplot in D3
+sub MotifRichnessPlot {
+    
+    ## Create a copy of the D3 heatmap template
+    $cmd = "cp ".$ENV{RSAT}."/public_html/templates_html/Barplot_motif_richness.html ".$main::outfile{motif_richness_barplot_html};
+    &doit($cmd, 0, 1, $verbose, 0, "", $main::out, $main::err);
+
+    my $motif_richness_tsv = &RSAT::util::RelativePath($main::outfile{summary}, $main::outfile{motif_richness_tsv});
+    
+    ## Read the D3 heatmap file and change the attributes
+    open(TEMP, ">".$main::outfile{temp_html_3}) || &RSAT::error::FatalError($main::outfile{temp_html_3}, "Cannot create temporary file");
+    my ($motif_richness_temp) = &RSAT::util::OpenInputFile($main::outfile{motif_richness_barplot_html});
+    while (<$motif_richness_temp>) {
+	chomp;
+	my $line = $_;
+
+	$line =~ s/--d3--/$d3_base/;
+	$line =~ s/--tsv--/$motif_richness_tsv/;
+	print TEMP $line."\n";
+    }
+    close($motif_richness_temp);
+    close(TEMP);
+
+    ## Rename the temporary file
+    &RSAT::message::TimeWarn("Exporting Motif Richness Barplot") if ($main::verbose >= 2);
+    $cmd = "mv ".$main::outfile{temp_html_3}." ".$main::outfile{motif_richness_barplot_html};
+    &doit($cmd, 0, 1, $verbose, 0, "", $main::out, $main::err);
 }
 
 
@@ -4818,14 +4859,14 @@ sub Dynamic_Heatmap_Complementarity {
 	$line =~ s/--r_numb--/$attributes_heatmap{Row_number}/;
 	$line =~ s/--gradient--/$attributes_heatmap{Gradient}/;
 	$line =~ s/--cluster_number--/$attributes_heatmap{Cluster_number}/;
-	$line =~ s/--average_r_number--/$attributes_heatmap{Average_r_number}/;
-	$line =~ s/--complete_r_number--/$attributes_heatmap{Complete_r_number}/;
-	$line =~ s/--single_r_number--/$attributes_heatmap{Single_r_number}/;
-	$line =~ s/--ward_r_number--/$attributes_heatmap{Ward_r_number}/;
-	$line =~ s/--average_c_number--/$attributes_heatmap{Average_c_number}/;
-	$line =~ s/--complete_c_number--/$attributes_heatmap{Complete_c_number}/;
-	$line =~ s/--single_c_number--/$attributes_heatmap{Single_c_number}/;
-	$line =~ s/--ward_c_number--/$attributes_heatmap{Ward_c_number}/;
+	# $line =~ s/--average_r_number--/$attributes_heatmap{Average_r_number}/; Aqui
+	# $line =~ s/--complete_r_number--/$attributes_heatmap{Complete_r_number}/;
+	# $line =~ s/--single_r_number--/$attributes_heatmap{Single_r_number}/;
+	# $line =~ s/--ward_r_number--/$attributes_heatmap{Ward_r_number}/;
+	# $line =~ s/--average_c_number--/$attributes_heatmap{Average_c_number}/;
+	# $line =~ s/--complete_c_number--/$attributes_heatmap{Complete_c_number}/;
+	# $line =~ s/--single_c_number--/$attributes_heatmap{Single_c_number}/;
+	# $line =~ s/--ward_c_number--/$attributes_heatmap{Ward_c_number}/;
 	$line =~ s/--row_order_default--/$attributes_heatmap{Row_order_default}/;
 	$line =~ s/--label_order--/$attributes_heatmap{Cluster_names}/;
 	$line =~ s/--collections--/$attributes_heatmap{Collections}/;
@@ -4978,6 +5019,7 @@ sub Create_Attributes_for_Heatmap_D3 {
     $cluster_collection_cmd .= "; attributes.list.file = '".$main::outfile{heatmap_collections_attributes}."'";
     $cluster_collection_cmd .= "; percent.table.file = '".$main::outfile{percent_table}."'";
     $cluster_collection_cmd .= "; coverage.table.file = '".$main::outfile{coverage_table}."'";
+    $cluster_collection_cmd .= "; motif.richness.table = '".$main::outfile{motif_richness_tsv}."'";
     $cluster_collection_cmd .= "; coverage.table.d3 = '".$main::outfile{heatmap_coverage_d3}."'";
     $cluster_collection_cmd .= "; coverage.heatmap.attributes.file = '".$main::outfile{heatmap_coverage_attributes}."'";
     $cluster_collection_cmd .= "; coverage.json.folder = '".$main::outfile{coverage_json_folder}."'";
@@ -5259,6 +5301,17 @@ sub InsertHeatmapCollectionComplementarity {
 }
 
 
+############################
+## Insert Heatmap of collections per clusters
+sub InsertMotifRichnessBarPlot {
+
+    my $motif_richness_section = ' 
+        <div id="Motif_richness_button" class="button_click Section_button"><a target="_blank" href="'.&RSAT::util::RelativePath($main::outfile{summary}, $main::outfile{motif_richness_barplot_html}).'"><strong>Motif richness per collection</strong></a></div>
+    ';
+
+    print $syn $motif_richness_section;
+}
+
 
 #########################################
 ## Open the <scrip> tag for JQuery code
@@ -5426,6 +5479,14 @@ $(document).ready(function() {
         $(this).toggleClass(\'selected_header_section\');
     }); 
 });
+
+// Slide the Heatmap View
+//$(document).ready(function() {
+//    $(\'#Motif_richness_button\').click(function() {
+//	$(\'#Motif_richness\').slideToggle(\'fast\');
+//        $(this).toggleClass(\'selected_header_section\');
+//    }); 
+//});
 
 // Slide the Motif per clusters View
 //$(document).ready(function() {
@@ -5896,6 +5957,10 @@ sub Synthesis {
 	&InsertHeatmapCollectionComplementarity();
 
     	&Dynamic_Heatmap_Complementarity(); 
+
+	&MotifRichnessPlot
+
+	&InsertMotifRichnessBarPlot
     }
 
     &InsertSmallForest();
@@ -5995,6 +6060,77 @@ sub trim_matrix_low_IC_columns {
     $cmd .= " -set_attr merge_nb ".$merge_nb;
     $cmd .= " -set_attr merged_AC ".$motif_ac;
     $cmd .= " -set_attr merged_ID ".$motif_id;
+
+    &doit($cmd, 0, $die_on_error, $verbose, 0, "", $main::out, $main::err);
+    return $trimmed_matrix;
+}
+
+
+#######################################
+## Trim the ends of the matrix with 
+## very low IC (pre-process step)
+sub trim_matrix_low_IC_columns_preprocess {
+
+    ## Read the matrix file name
+    my $matrix_to_trim = shift;
+    my $trimmed_matrix = shift;
+    my $IC_threshold = shift;
+    
+    my $temp_IC_file = &RSAT::util::make_temp_file("","IC_test", 1);
+    my $IC_info = "";
+    my @IC_info_array = ();
+    my $trim_up = 0; 
+    my $trim_dw = 0;
+  
+
+    ## Calculate the IC of the matrix,
+    ## save this info in a file
+    my $cmd = $SCRIPTS."/convert-matrix -i ".$matrix_to_trim." -from tf -return info,header,margins -o ".$temp_IC_file;
+    &doit($cmd, 0, $die_on_error, $verbose, 0, "", $main::out, $main::err);
+
+    ## Read the IC file
+    ## Select the line with the sum of IC of each column
+    my ($IC_file) = &OpenInputFile($temp_IC_file);
+    while (<$IC_file>) {
+	chomp;
+	if ($_ =~ /; i\.sum/) {
+	    $IC_info = $_;
+	    $IC_info =~ s/;\s+i.sum\s+//g;
+	    @IC_info_array = split(/\s+/, $IC_info);
+	    last;
+	} else {
+	    next;
+	}
+    }
+    close($IC_file);
+    unlink($IC_file);
+
+    ## Calculate the number of trimmed columns 
+    ## in the upstream side of the motif
+    foreach my $IC (@IC_info_array) {
+	if ($IC <= $IC_threshold) {
+	    $trim_up++;
+	} else {
+	    last;
+	}
+    }
+
+    ## Calculate the number of trimmed columns 
+    ## in the downstream side of the motif
+    @IC_info_array = reverse(@IC_info_array);
+    ## Delete the last element which correspond to the sum of IC
+    shift @IC_info_array;
+    foreach my $IC (@IC_info_array) {
+	if ($IC <= $IC_threshold) {
+	    $trim_dw++;
+	} else {
+	    last;
+	}
+    }
+
+    ## Trim the matrix
+    $cmd = $SCRIPTS."/convert-matrix -i ".$matrix_to_trim." -from tf -to tf";
+    $cmd .= " -trim_col_left ".$trim_up." -trim_col_right ".$trim_dw." -return counts,consensus -o ".$trimmed_matrix;
 
     &doit($cmd, 0, $die_on_error, $verbose, 0, "", $main::out, $main::err);
     return $trimmed_matrix;
